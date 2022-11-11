@@ -1,6 +1,6 @@
 * Object-relational Mapping (ORM)
-To better interact with persistant data it is often useful to apply a layer of abstraction which allows us interface in the native language of our backend application as opposed to simply forwarding raw queries to our database.
-One such abstraction is a technique known as "object-relational mapping" (ORM). ORMs seek to represent the structure of relational databases in the form of object-oriented design in the native language of our application. Once this abstraction is applied, one may easily perform database operations in the context of one's language of choice.
+To better interact with persistant data it is often useful to apply a layer of abstraction which allows us interface in the native language of our backend application as opposed to simply forwarding raw queries to our database.\\
+One such abstraction is a technique known as "object-relational mapping" (ORM). ORMs seek to represent the structure of relational databases in the form of object-oriented design. Once this abstraction is applied, one may easily perform database operations in the context of our chosen application language.
 ** Motivation
 *** Setup
 To demonstrate the motivation and application of a simple ORM, let us first establish a binding between a database and our application.
@@ -495,5 +495,8 @@ $ node main.js
 ...
 #+END_SRC
 
-**** Conclusions
+*** Conclusions
 There has to be a better way. The first (possibly naive) idea that comes to mind is implementing functions which take arguments and pass them to interpolated strings expressing our SQL statements. The second, and more powerful idea, is making the observation that to each table we have explicly defined a set of operations for manipulation of SOLELY that data, i.e. creation of tables, addition of data, reading of data, etc... In principle, if we could encapsulate the notion of a given table as a so-called "model" then perhaps all CRUD operations and table properties could be managed in a more convenient way. With this in mind, let's attempt such an abstraction.
+
+** A Naive ORM Implementation
+
