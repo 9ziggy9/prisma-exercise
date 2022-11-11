@@ -494,3 +494,6 @@ $ node main.js
         [{ name: "Soon-Mi"}] <-- There it is!
 ...
 #+END_SRC
+
+**** Conclusions
+There has to be a better way. The first (possibly naive) idea that comes to mind is implementing functions which take arguments and pass them to interpolated strings expressing our SQL statements. The second, and more powerful idea, is making the observation that to each table we have explicly defined a set of operations for manipulation of SOLELY that data, i.e. creation of tables, addition of data, reading of data, etc... In principle, if we could encapsulate the notion of a given table as a so-called "model" then perhaps all CRUD operations and table properties could be managed in a more convenient way. With this in mind, let's attempt such an abstraction.
