@@ -1,0 +1,15 @@
+{
+  "name": "prisma-orm",
+  "version": "1.0.0",
+  "description": "* Object-relational Mapping (ORM) To better interact with persistant data it is often useful to apply a layer of abstraction which allows us interface in the native language of our backend application as opposed to simply forwarding raw queries to our database. One such abstraction is a technique known as \"object-relational mapping\" (ORM). ORMs seek to represent structure of relational databases in the form of object-oriented design in the native language of our application. Once this abstraction is applied, one may easily perform database operations in the context of one's language of choice. ** Setup To demonstrate the motivation and application of a simple ORM, let us first create a server and establish a binding between the database and our client. We first initialize a new node module. #+BEGIN_SRC console $ npm init -y #+END_SRC Next we import the sqlite3 package which allows us to interact with a SQLite database within a nodeJS application. #+NAME: main.js #+BEGIN_SRC js import http",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "sqlite3": "^5.1.2"
+  }
+}

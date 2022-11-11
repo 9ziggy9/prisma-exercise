@@ -1,0 +1,28 @@
+* Object-relational Mapping (ORM)
+To better interact with persistant data it is often useful to apply a layer of abstraction which allows us interface in the native language of our backend application as opposed to simply forwarding raw queries to our database.
+One such abstraction is a technique known as "object-relational mapping" (ORM). ORMs seek to represent the structure of relational databases in the form of object-oriented design in the native language of our application. Once this abstraction is applied, one may easily perform database operations in the context of one's language of choice.
+** Motivation
+To demonstrate the motivation and application of a simple ORM, let us first establish a binding between a database and our application.
+We first initialize a new node module and create a dedicated database directory to house our db file.
+#+BEGIN_SRC console
+$ npm init -y
+$ npm install sqlite3
+$ mkdir db
+#+END_SRC
+Next we import the sqlite3 package which allows us to interact with a SQLite database within a nodeJS application.
+#+NAME: main.js
+#+BEGIN_SRC js
+const sqlite3 = require("sqlite3");
+
+// open instance to database
+let test_db = new sqlite3.Database("./db/test.db");
+#+END_SRC
+If we simply run our code
+#+BEGIN_SRC console
+$ node main.js
+#+END_SRC
+We can immediately see that an sqlite3 database has been created by virtue of instantiating a connection via Database method.
+#+BEGIN_SRC console
+$ ls ./db
+> test.db
+#+END_SRC
