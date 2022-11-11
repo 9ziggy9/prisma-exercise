@@ -2,6 +2,7 @@
 To better interact with persistant data it is often useful to apply a layer of abstraction which allows us interface in the native language of our backend application as opposed to simply forwarding raw queries to our database.
 One such abstraction is a technique known as "object-relational mapping" (ORM). ORMs seek to represent the structure of relational databases in the form of object-oriented design in the native language of our application. Once this abstraction is applied, one may easily perform database operations in the context of one's language of choice.
 ** Motivation
+*** Setup
 To demonstrate the motivation and application of a simple ORM, let us first establish a binding between a database and our application.
 We first initialize a new node module and create a dedicated database directory to house our db file.
 #+BEGIN_SRC console
@@ -15,7 +16,13 @@ Next we import the sqlite3 package which allows us to interact with a SQLite dat
 const sqlite3 = require("sqlite3");
 
 // open instance to database
-let test_db = new sqlite3.Database("./db/test.db");
+const db = new sqlite3.Database("./db/test.db");
+
+// close connection and deallocate resources
+db.close((err) => {
+  if (err) throw new Error(err);
+  console.log("Closed database connection.");
+});
 #+END_SRC
 If we simply run our code
 #+BEGIN_SRC console
@@ -25,4 +32,112 @@ We can immediately see that an sqlite3 database has been created by virtue of in
 #+BEGIN_SRC console
 $ ls ./db
 > test.db
+#+END_SRC
+
+*** Raw SQL Interaction
+Now that an interface to our SQLite database exists, we can forward raw SQL instructions. Suppose we were creating an application for veterinary clinic. One could imagine a set of tables such as Pet, Veterinarian, Owner, Appointment, etc... Let's first define a sensible set of SQL commands to create these tables.
+#+BEGIN_SRC js
+const petTableSQL = `CREATE TABLE IF NOT EXISTS Pet (
+  id INTEGER PRIMARY KEY,
+  name TEXT NOT NULL,
+  species TEXT NOT NULL,
+  breed TEXT NOT NULL,
+  owner_id INTEGER,
+  FOREIGN KEY (owner_id) REFERENCES Owner (id)
+)`;
+const ownTableSQL = `CREATE TABLE IF NOT EXISTS Owner (
+  id INTEGER PRIMARY KEY,
+  name TEXT NOT NULL,
+  phone INTEGER NOT NULL,
+  address TEXT
+)`;
+const vetTableSQL = `CREATE TABLE IF NOT EXISTS Veterinarian (
+  id INTEGER PRIMARY KEY,
+  name text
+)`;
+// NOTE: We will apply UNIX epoch time in our table!
+const appTableSQL = `CREATE TABLE IF NOT EXISTS Appointment (
+  id INTEGER PRIMARY KEY,
+  date INTEGER NOT NULL,
+  pet_id INTEGER NOT NULL,
+  vet_id INTEGER NOT NULL,
+  FOREIGN KEY (vet_id) REFERENCES Veterinarian (id),
+  FOREIGN KEY (pet_id) REFERENCES Pet (id)
+)`;
+#+END_SRC
+Note that all we are doing is defining the raw SQL commands which we would execute via the sqlite3 interpreter in the form of strings. We now FORWARD these RAW commands by making use of methods on our db connection.
+#+BEGIN_SRC js
+db.serialize(() => {
+  db.run(petTableSQL, err => {
+    if (err) console.error(err.message);
+  });
+  db.run(vetTableSQL, err => {
+    if (err) console.error(err.message);
+  });
+  db.run(ownTableSQL, err => {
+    if (err) console.error(err.message);
+  });
+  db.run(appTableSQL, err => {
+    if (err) console.error(err.message);
+  });
+});
+#+END_SRC
+serialize() method enforces synchronous execution in its callback--were we to not wrap our run() methods in this fashion, we would have no guarantee that a given instruction was completed before moving on to the next. run() method also takes a callback as its second argument, exposing errors received from the sqlite3 interpreter to our application. In this example, if an error occurs, we simply write to console.
+At this point, the entirety of our source code should look as follows:
+#+NAME: main.js
+#+BEGIN_SRC js
+const sqlite3 = require("sqlite3");
+
+const db = new sqlite3.Database("./db/test.db", err => {
+  if (err) console.error(err.message);
+  console.log("Connected to database.");
+});
+
+const petTableSQL = `CREATE TABLE IF NOT EXISTS Pet (
+  id INTEGER PRIMARY KEY,
+  name TEXT NOT NULL,
+  species TEXT NOT NULL,
+  breed TEXT NOT NULL,
+  owner_id INTEGER,
+  FOREIGN KEY (owner_id) REFERENCES Owner (id)
+)`;
+const ownTableSQL = `CREATE TABLE IF NOT EXISTS Owner (
+  id INTEGER PRIMARY KEY,
+  name TEXT NOT NULL,
+  phone INTEGER NOT NULL,
+  address TEXT
+)`;
+const vetTableSQL = `CREATE TABLE IF NOT EXISTS Veterinarian (
+  id INTEGER PRIMARY KEY,
+  name text
+)`;
+// NOTE: We will apply UNIX epoch time in our table!
+const appTableSQL = `CREATE TABLE IF NOT EXISTS Appointment (
+  id INTEGER PRIMARY KEY,
+  date INTEGER NOT NULL,
+  pet_id INTEGER NOT NULL,
+  vet_id INTEGER NOT NULL,
+  FOREIGN KEY (vet_id) REFERENCES Veterinarian (id),
+  FOREIGN KEY (pet_id) REFERENCES Pet (id)
+)`;
+
+db.serialize(() => {
+  db.run(petTableSQL, err => {
+    if (err) console.error(err.message);
+  });
+  db.run(vetTableSQL, err => {
+    if (err) console.error(err.message);
+  });
+  db.run(ownTableSQL, err => {
+    if (err) console.error(err.message);
+  });
+  db.run(appTableSQL, err => {
+    if (err) console.error(err.message);
+  });
+});
+
+db.close((err) => {
+  if (err) console.error(err.message);
+  console.log("Closed database connection.");
+});
 #+END_SRC
