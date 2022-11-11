@@ -499,4 +499,75 @@ $ node main.js
 There has to be a better way. The first (possibly naive) idea that comes to mind is implementing functions which take arguments and pass them to interpolated strings expressing our SQL statements. The second, and more powerful idea, is making the observation that to each table we have explicly defined a set of operations for manipulation of SOLELY that data, i.e. creation of tables, addition of data, reading of data, etc... In principle, if we could encapsulate the notion of a given table as a so-called "model" then perhaps all CRUD operations and table properties could be managed in a more convenient way. With this in mind, let's attempt such an abstraction.
 
 ** A Naive ORM Implementation
+We now seek to encapsulate our rather verbose and cumbersome SQL code into an object-oriented design pattern. As mentioned in our conclusion to part 1, we can first make the observation that to each table in our db is a rather natural notion of "model". By model, we mean a JavaScript representation of the table and its properties. To make such a notion more concrete, let's begin by creating a models.js file and define a class representation of a table's columns.
+#+BEGIN_SRC js
+class Column {
+  constructor(name, type,
+	      pk=false, nullable=true,
+	      unique=false, references=null) {
+    this.name = name;
+    this.type = type;
+    this.pk = pk;
+    this.nullable = nullable;
+    this.unique = unique;
+    this.references = references;
+  }
+  static from = (obj) =>
+    new Column(obj.name, obj.type, obj.pk, obj.nullable, obj.unique);
+}
+#+END_SRC
+Our static from() method is for the purposes of defining columns in a convenient way as will be seen shortly. We define a class of Model, which is instantiated via a set of Column instances. In the constructor, we invoke static Column.from() method as a bit of syntactic sugar in instantiation of models.
+#+BEGIN_SRC js
+class Model {
+  constructor(tableName, columns) {
+    this.tableName = tableName;
+    this.columns = columns.map(col => Column.from(col));
+  }
+}
+#+END_SRC
+Now we can instantiate models by passing arrays of POJOs representing table columns.
+#+BEGIN_SRC js
+const Pet = new Model("Pet", [
+  {name:"id", type:"INTEGER", pk:true},
+  {name:"name", type:"TEXT"},
+  {name:"species", type:"TEXT"},
+  {name:"breed", type:"TEXT"},
+  {name:"owner_id", type:"INTEGER"}
+]);
+#+END_SRC
+Of course, one method that may be of principal interest to us in our Model class is the ability to generate SQL commands which create a Table associated with the model. There are a number of approaches to use here--this is ostensibly an exercise in string manipulation. I provide one such solution here:
+#+BEGIN_SRC js
+class Model {
+  constructor(tableName, columns) {
+    this.tableName = tableName;
+    this.columns = columns.map(col => Column.from(col));
+  }
+  _handleComma = (i) => !i ? "" : ",";
+  sqlCreate = () => {
+    return this.columns.reduce((cmd, col, i) => {
+      const nameType = ` ${this._handleComma(i)} ${col.name} ${col.type}`;
+      const pk = col.pk ? "PRIMARY KEY" : "";
+      const nullable = col.nullable ? "" : "NOT NULL";
+      const unique = col.unique ? "UNIQUE" : "";
+      return cmd += nameType + pk + nullable + unique;
+    }, `CREATE TABLE IF NOT EXISTS ${this.tableName} (`) + ")";
+  }
+}
+#+END_SRC
+If we were to log this method... i.e.
+#+BEGIN_SRC console
+const Pet = new Model("Pet", [
+  {name:"id", type:"INTEGER", pk:true},
+  {name:"name", type:"TEXT"},
+  {name:"species", type:"TEXT"},
+  {name:"breed", type:"TEXT"},
+  {name:"owner_id", type:"INTEGER"}
+]);
 
+console.log(Pet.sqlCreate());
+#+END_SRC
+We would receive the following output.
+#+BEGIN_SRC sqlite
+CREATE TABLE IF NOT EXISTS Pet (  id INTEGERPRIMARY KEY , name TEXT , species TEXT , breed TEXT , owner_id INTEGER)
+#+END_SRC
+Success! At least, in principle we do indeed have an object-oriented JavaScript abstraction which can be "compiled" (I use this term loosely) to raw SQL.
