@@ -35,6 +35,7 @@ $ ls ./db
 #+END_SRC
 
 *** Raw SQL Interaction
+**** Creating Tables
 Now that an interface to our SQLite database exists, we can forward raw SQL instructions. Suppose we were creating an application for veterinary clinic. One could imagine a set of tables such as Pet, Veterinarian, Owner, Appointment, etc... Let's first define a sensible set of SQL commands to create these tables.
 #+BEGIN_SRC js
 const petTableSQL = `CREATE TABLE IF NOT EXISTS Pet (
@@ -141,3 +142,9 @@ db.close((err) => {
   console.log("Closed database connection.");
 });
 #+END_SRC
+Before executing our code once more, we must do something about the existing database we have created. This presents the first issue in our chosen design. We can, of course, arbitrarily drop our tables at will--we can even delete the database itself. However, this is clearly an issue as one can imagine a situation in which we wish to "migrate" any existing table entries to our new schema. Mitigating this issue is not a trivial issue. We could, in principle, implement the logic of table alterations in our code without data loss but as we will see shortly. For the time being, we will simply delete our database and run our code again.
+#+BEGIN_SRC console
+$ rm db/test.db && node main.js
+$ sqlite3 db/test.db ".schema"
+#+END_SRC
+Examining output from sqlite3 we should now see that we have successfully implemented our simple schema.
