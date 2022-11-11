@@ -22,7 +22,7 @@ class Model {
   sqlCreate = () => {
     return this.columns.reduce((cmd, col, i) => {
       const nameType = ` ${this._handleComma(i)} ${col.name} ${col.type}`;
-      const pk = col.pk ? "PRIMARY KEY" : "";
+      const pk = col.pk ? " PRIMARY KEY" : "";
       const nullable = col.nullable ? "" : "NOT NULL";
       const unique = col.unique ? "UNIQUE" : "";
       return cmd += nameType + pk + nullable + unique;

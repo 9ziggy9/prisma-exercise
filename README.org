@@ -546,7 +546,7 @@ class Model {
   sqlCreate = () => {
     return this.columns.reduce((cmd, col, i) => {
       const nameType = ` ${this._handleComma(i)} ${col.name} ${col.type}`;
-      const pk = col.pk ? "PRIMARY KEY" : "";
+      const pk = col.pk ? " PRIMARY KEY" : "";
       const nullable = col.nullable ? "" : "NOT NULL";
       const unique = col.unique ? "UNIQUE" : "";
       return cmd += nameType + pk + nullable + unique;
@@ -568,6 +568,6 @@ console.log(Pet.sqlCreate());
 #+END_SRC
 We would receive the following output.
 #+BEGIN_SRC sqlite
-CREATE TABLE IF NOT EXISTS Pet (  id INTEGERPRIMARY KEY , name TEXT , species TEXT , breed TEXT , owner_id INTEGER)
+CREATE TABLE IF NOT EXISTS Pet (  id INTEGER PRIMARY KEY , name TEXT , species TEXT , breed TEXT , owner_id INTEGER)
 #+END_SRC
 Success! At least, in principle we do indeed have an object-oriented JavaScript abstraction which can be "compiled" (I use this term loosely) to raw SQL.
