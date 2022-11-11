@@ -49,7 +49,7 @@ const petTableSQL = `CREATE TABLE IF NOT EXISTS Pet (
 const ownTableSQL = `CREATE TABLE IF NOT EXISTS Owner (
   id INTEGER PRIMARY KEY,
   name TEXT NOT NULL,
-  phone INTEGER NOT NULL,
+  phone INTEGER NOT NULL UNIQUE,
   address TEXT
 )`;
 const vetTableSQL = `CREATE TABLE IF NOT EXISTS Veterinarian (
@@ -70,20 +70,24 @@ Note that all we are doing is defining the raw SQL commands which we would execu
 #+BEGIN_SRC js
 db.serialize(() => {
   db.run(petTableSQL, err => {
+    console.log(petTableSQL);
     if (err) console.error(err.message);
   });
   db.run(vetTableSQL, err => {
+    console.log(vetTableSQL);
     if (err) console.error(err.message);
   });
   db.run(ownTableSQL, err => {
+    console.log(ownTableSQL);
     if (err) console.error(err.message);
   });
   db.run(appTableSQL, err => {
+    console.log(appTableSQL);
     if (err) console.error(err.message);
   });
 });
 #+END_SRC
-serialize() method enforces synchronous execution in its callback--were we to not wrap our run() methods in this fashion, we would have no guarantee that a given instruction was completed before moving on to the next. run() method also takes a callback as its second argument, exposing errors received from the sqlite3 interpreter to our application. In this example, if an error occurs, we simply write to console.
+serialize() method enforces synchronous execution in its callback--were we to not wrap our run() methods in this fashion, we would have no guarantee that a given instruction was completed before moving on to the next. run() method also takes a callback as its second argument, exposing errors received from the sqlite3 interpreter to our application. In this example, if an error occurs, we simply write to console. Also note that we log the SQL statement itself, this is very useful for debugging purposes.
 At this point, the entirety of our source code should look as follows:
 #+NAME: main.js
 #+BEGIN_SRC js
@@ -142,9 +146,167 @@ db.close((err) => {
   console.log("Closed database connection.");
 });
 #+END_SRC
-Before executing our code once more, we must do something about the existing database we have created. This presents the first issue in our chosen design. We can, of course, arbitrarily drop our tables at will--we can even delete the database itself. However, this is clearly an issue as one can imagine a situation in which we wish to "migrate" any existing table entries to our new schema. Mitigating this issue is not a trivial issue. We could, in principle, implement the logic of table alterations in our code without data loss but as we will see shortly. For the time being, we will simply delete our database and run our code again.
+Before executing our code once more, we must do something about the existing database we have created. This presents the first issue in our chosen design. We can, of course, arbitrarily drop our tables at will--we can even delete the database itself. However, this is clearly an issue as one can imagine a situation in which we wish to "migrate" any existing table entries to our new schema. Mitigating this issue is not a trivial issue. We could, in principle, implement the logic of table alterations in our code without data loss as we will see shortly. For the time being, we will simply delete our database and run our code again.
 #+BEGIN_SRC console
 $ rm db/test.db && node main.js
 $ sqlite3 db/test.db ".schema"
 #+END_SRC
 Examining output from sqlite3 we should now see that we have successfully implemented our simple schema.
+
+**** Inserting Some Simple Data
+Now that we have tables, let's store some data. Within our serialize() callback, after we have ran the table creation commands, we will add (seed) some owners.
+#+BEGIN_SRC js
+ // previous code ... 
+    const ownSeedSQL =  `INSERT INTO Owner (name, phone, address) VALUES
+      ("Ziggy", 5552349999, "123 Hello Lane"),
+      ("Soon-Mi", 5552349922, "321 World Street"),
+      ("Adrian", 5551108765, "312 Degraf Way")`;
+
+  db.serialize(() => {
+    // previous code ... 
+    db.run(ownSeedSQL, err => {
+      if (err) console.error(err.message);
+    });
+  });
+#+END_SRC
+After running our code we examine our DB and note that our data now exists.
+#+BEGIN_SRC console
+$ sqlite3 db/test.db "SELECT * FROM Owner"
+>>>
+1|Ziggy|5552349999|123 Hello Lane
+2|Soon-Mi|5552349922|321 World Street
+3|Adrian|5551108765|312 Degraf Way
+#+END_SRC
+Let's also add additional data for the remaining tables.
+#+BEGIN_SRC js
+ // previous code ... 
+const vetSeedSQL = `INSERT INTO Veterinarian (name) VALUES
+  ("Alice"),
+  ("Bob")`;
+const petSeedSQL = `INSERT INTO Pet (name, species, breed, owner_id) VALUES
+  ("Charlie", "cat", "Tabby", 1),
+  ("Echo", "cat", "DSH", 1),
+  ("Puppers", "dog", "German Shepherd", 2),
+  ("Bubbles", "fish", "Goldfish", 3)`;
+const appSeedSQL = `INSERT INTO Appointment (vet_id, pet_id, date) VALUES
+  (1, 2, strftime("%s", "now"))
+  (3, 1, strftime("%s", "now"))`;
+
+  db.serialize(() => {
+    // previous code ... 
+    db.run(vetSeedSQL, err => {
+      console.log(vetSeedSQL);
+      if (err) console.error(err.message);
+    });
+    db.run(petSeedSQL, err => {
+      console.log(petSeedSQL);
+      if (err) console.error(err.message);
+    });
+    db.run(appSeedSQL, err => {
+      console.log(appSeedSQL);
+      if (err) console.error(err.message);
+    });
+  });
+#+END_SRC
+As a quick asside, notice our choice of UNIX epoch time to store dates. This has the advantage that a date can be expressed as a simple integer. Nearly all programming languages have built-in support for generating datetime strings from UNIX epoch input and for this reason it is an extremely portable strategy in situations where the tech stack of an application must rely on sharing of time information between multiple languages. For more information on the history and adoption of UNIX time, see https://en.wikipedia.org/wiki/Unix_time.\\
+At this point our source code should be as follows:
+#+BEGIN_SRC js
+const sqlite3 = require("sqlite3");
+
+const db = new sqlite3.Database("./db/test.db", err => {
+  if (err) console.error(err.message);
+  console.log("Connected to database.");
+});
+
+// TABLE COMMANDS
+const petTableSQL = `CREATE TABLE IF NOT EXISTS Pet (
+  id INTEGER PRIMARY KEY,
+  name TEXT NOT NULL,
+  species TEXT NOT NULL,
+  breed TEXT NOT NULL,
+  owner_id INTEGER,
+  FOREIGN KEY (owner_id) REFERENCES Owner (id)
+)`;
+const ownTableSQL = `CREATE TABLE IF NOT EXISTS Owner (
+  id INTEGER PRIMARY KEY,
+  name TEXT NOT NULL,
+  phone INTEGER NOT NULL UNIQUE,
+  address TEXT
+)`;
+const vetTableSQL = `CREATE TABLE IF NOT EXISTS Veterinarian (
+  id INTEGER PRIMARY KEY,
+  name text
+)`;
+// NOTE: We will apply UNIX epoch time in our table!
+const appTableSQL = `CREATE TABLE IF NOT EXISTS Appointment (
+  id INTEGER PRIMARY KEY,
+  date INTEGER NOT NULL,
+  pet_id INTEGER NOT NULL,
+  vet_id INTEGER NOT NULL,
+  FOREIGN KEY (vet_id) REFERENCES Veterinarian (id),
+  FOREIGN KEY (pet_id) REFERENCES Pet (id)
+)`;
+
+// INSERTION COMMANDS
+const ownSeedSQL =  `INSERT INTO Owner (name, phone, address) VALUES
+  ("Ziggy", 5552349999, "123 Hello Lane"),
+  ("Soon-Mi", 5552349922, "321 World Street"),
+  ("Adrian", 5551108765, "312 Degraf Way")`;
+const vetSeedSQL = `INSERT INTO Veterinarian (name) VALUES
+  ("Alice"),
+  ("Bob")`;
+const petSeedSQL = `INSERT INTO Pet (name, species, breed, owner_id) VALUES
+  ("Charlie", "cat", "Tabby", 1),
+  ("Echo", "cat", "DSH", 1),
+  ("Puppers", "dog", "German Shepherd", 2),
+  ("Bubbles", "fish", "Goldfish", 3)`;
+const appSeedSQL = `INSERT INTO Appointment (vet_id, pet_id, date) VALUES
+  (1, 2, strftime("%s", "now")),
+  (3, 1, strftime("%s", "now"))`;
+
+db.serialize(() => {
+  db.run(petTableSQL, err => {
+    console.log(petTableSQL);
+    if (err) console.error(err.message);
+  });
+  db.run(vetTableSQL, err => {
+    console.log(vetTableSQL);
+    if (err) console.error(err.message);
+  });
+  db.run(ownTableSQL, err => {
+    console.log(ownTableSQL);
+    if (err) console.error(err.message);
+  });
+  db.run(appTableSQL, err => {
+    console.log(appTableSQL);
+    if (err) console.error(err.message);
+  });
+  db.run(ownSeedSQL, err => {
+    console.log(ownSeedSQL);
+    if (err) console.error(err.message);
+  });
+  db.run(vetSeedSQL, err => {
+    console.log(vetSeedSQL);
+    if (err) console.error(err.message);
+  });
+  db.run(petSeedSQL, err => {
+    console.log(petSeedSQL);
+    if (err) console.error(err.message);
+  });
+  db.run(appSeedSQL, err => {
+    console.log(appSeedSQL);
+    if (err) console.error(err.message);
+  });
+});
+
+db.close((err) => {
+  if (err) console.error(err.message);
+  console.log("Closed database connection.");
+});
+#+END_SRC
+Let's completely rebuild the database ...
+#+BEGIN_SRC console
+$ rm db/test.db && node main.js
+$ sqlite3 db/test.db "SELECT * FROM Appointment"
+#+END_SRC
+And at this juncture we should see that Appointment rows have been populated.
