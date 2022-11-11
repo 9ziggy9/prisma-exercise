@@ -489,7 +489,8 @@ db.all(selectOwnerFromAppsSQL, (err, rows) => {
 And if we run our code
 #+BEGIN_SRC console
 $ node main.js
->>>  ...
+>>>
+...
         [{ name: "Soon-Mi"}] <-- There it is!
 ...
 #+END_SRC
