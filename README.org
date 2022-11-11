@@ -153,7 +153,7 @@ $ sqlite3 db/test.db ".schema"
 #+END_SRC
 Examining output from sqlite3 we should now see that we have successfully implemented our simple schema.
 
-**** Inserting Some Simple Data
+**** Inserting Some Seed Data
 Now that we have tables, let's store some data. Within our serialize() callback, after we have ran the table creation commands, we will add (seed) some owners.
 #+BEGIN_SRC js
  // previous code ... 
@@ -307,6 +307,166 @@ db.close((err) => {
 Let's completely rebuild the database ...
 #+BEGIN_SRC console
 $ rm db/test.db && node main.js
-$ sqlite3 db/test.db "SELECT * FROM Appointment"
 #+END_SRC
-And at this juncture we should see that Appointment rows have been populated.
+It is useful to take a moment to examine the state of the database via sqlite3 interpreter before moving on.
+
+**** A Quick Refactoring
+Thus far we have simply initialized a database and inserted some seed data. Perhaps it would be fruitful to take this bootstrapping procedure and decouple it from our main application. Let's create a file which we call initDB.js to contain this logic.
+#+BEGIN_SRC js
+// TABLE COMMANDS
+const petTableSQL = `CREATE TABLE IF NOT EXISTS Pet (
+  id INTEGER PRIMARY KEY,
+  name TEXT NOT NULL,
+  species TEXT NOT NULL,
+  breed TEXT NOT NULL,
+  owner_id INTEGER,
+  FOREIGN KEY (owner_id) REFERENCES Owner (id)
+)`;
+const ownTableSQL = `CREATE TABLE IF NOT EXISTS Owner (
+  id INTEGER PRIMARY KEY,
+  name TEXT NOT NULL,
+  phone INTEGER NOT NULL UNIQUE,
+  address TEXT
+)`;
+const vetTableSQL = `CREATE TABLE IF NOT EXISTS Veterinarian (
+  id INTEGER PRIMARY KEY,
+  name text
+)`;
+// NOTE: We will apply UNIX epoch time in our table!
+const appTableSQL = `CREATE TABLE IF NOT EXISTS Appointment (
+  id INTEGER PRIMARY KEY,
+  date INTEGER NOT NULL,
+  pet_id INTEGER NOT NULL,
+  vet_id INTEGER NOT NULL,
+  FOREIGN KEY (vet_id) REFERENCES Veterinarian (id),
+  FOREIGN KEY (pet_id) REFERENCES Pet (id)
+)`;
+
+// INSERTION COMMANDS
+const ownSeedSQL =  `INSERT INTO Owner (name, phone, address) VALUES
+  ("Ziggy", 5552349999, "123 Hello Lane"),
+  ("Soon-Mi", 5552349922, "321 World Street"),
+  ("Adrian", 5551108765, "312 Degraf Way")`;
+const vetSeedSQL = `INSERT INTO Veterinarian (name) VALUES
+  ("Alice"),
+  ("Bob")`;
+const petSeedSQL = `INSERT INTO Pet (name, species, breed, owner_id) VALUES
+  ("Charlie", "cat", "Tabby", 1),
+  ("Echo", "cat", "DSH", 1),
+  ("Puppers", "dog", "German Shepherd", 2),
+  ("Bubbles", "fish", "Goldfish", 3)`;
+const appSeedSQL = `INSERT INTO Appointment (vet_id, pet_id, date) VALUES
+  (1, 2, strftime("%s", "now")),
+  (3, 1, strftime("%s", "now"))`;
+
+function init(db) {
+  db.serialize(() => {
+    db.run(petTableSQL, err => {
+      console.log(petTableSQL);
+      if (err) console.error(err.message);
+    });
+    db.run(vetTableSQL, err => {
+      console.log(vetTableSQL);
+      if (err) console.error(err.message);
+    });
+    db.run(ownTableSQL, err => {
+      console.log(ownTableSQL);
+      if (err) console.error(err.message);
+    });
+    db.run(appTableSQL, err => {
+      console.log(appTableSQL);
+      if (err) console.error(err.message);
+    });
+    db.run(ownSeedSQL, err => {
+      console.log(ownSeedSQL);
+      if (err) console.error(err.message);
+    });
+    db.run(vetSeedSQL, err => {
+      console.log(vetSeedSQL);
+      if (err) console.error(err.message);
+    });
+    db.run(petSeedSQL, err => {
+      console.log(petSeedSQL);
+      if (err) console.error(err.message);
+    });
+    db.run(appSeedSQL, err => {
+      console.log(appSeedSQL);
+      if (err) console.error(err.message);
+    });
+  });
+}
+
+module.exports = init;
+#+END_SRC
+And within our main.js file, we can now import this procedure and pass it our db instance.
+#+BEGIN_SRC js
+const sqlite3 = require("sqlite3");
+const initDB = require("./initDB");
+
+const db = new sqlite3.Database("./db/test.db", err => {
+  if (err) console.error(err.message);
+  console.log("Connected to database.");
+});
+
+initDB(db);
+
+db.close((err) => {
+  if (err) console.error(err.message);
+  console.log("Closed database connection.");
+});
+#+END_SRC
+To simplify the procedure of repeatedly deleting and initializing our database, let's utilize parsing of simple command line arguments in our main function to indicate whether or not we would like to re-initialize the database before further execution. To do this, we utilize inbuilt process.argv object (https://nodejs.org/docs/latest/api/process.html) which exposes command line arguments as strings in our application.
+We'll check to see if the third command line string is "INIT", and use this to guard the bootstrapping procedure. We simply index into process.argv at index 2 (zero indexed). Why index 2? console.log(process.argv) and note that the first two arguments stored are the interpreter and program paths respectively.
+#+BEGIN_SRC js
+if (process.argv[2] === "INIT") {
+  console.log("Initializing database...");
+  initDB(db);
+}
+#+END_SRC
+Additionally, we will add logic to drop tables on INIT if they happen to already exist. To keep this relatively DRY, we can use a forEach over array of strings. In init function of initDB.js we add the following as the first operation within db.serialize().
+#+BEGIN_SRC js
+    ["Pet", "Appointment", "Owner", "Veternarian"].forEach((tbl) => {
+      db.run(`DROP TABLE IF EXISTS ${tbl}`, err => {
+	console.log(`DROPPING TABLE: ${tbl}`);
+	if (err) console.error(err.message);
+      });
+    });
+#+END_SRC
+Let's also apply the same strategy for our other operations. init(db) should now look like:
+#+BEGIN_SRC js
+function init(db) {
+// DROP EXISTING TABLES
+  db.serialize(() => {
+    ["Pet", "Appointment", "Owner", "Veternarian"].forEach((tbl) => {
+      db.run(`DROP TABLE IF EXISTS ${tbl}`, err => {
+	console.log(`DROPPING TABLE: ${tbl}`);
+	if (err) console.error(err.message);
+      });
+    });
+// CREATE TABLES
+    [petTableSQL, vetTableSQL, ownTableSQL, appTableSQL].forEach((sql) => {
+      db.run(sql, err => {
+	console.log(sql);
+	if (err) console.error(err.message);
+      });
+    });
+// SEED DATA
+    [ownSeedSQL, vetSeedSQL, petSeedSQL, appSeedSQL].forEach((sql) => {
+      db.run(sql, err => {
+	console.log(sql);
+	if (err) console.error(err.message);
+      });
+    });
+  });
+}
+#+END_SRC
+At this point, we can initialize and/or rebuild or database at any point by simply running
+#+BEGIN_SRC console
+$ node main.js INIT
+#+END_SRC
+and note that simply running
+#+BEGIN_SRC console
+$ node main.js
+#+END_SRC
+skips the initialization step. Let's read some data from our database!
+**** Reading In Data
