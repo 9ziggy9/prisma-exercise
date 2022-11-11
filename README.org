@@ -555,7 +555,7 @@ class Model {
 }
 #+END_SRC
 If we were to log this method... i.e.
-#+BEGIN_SRC console
+#+BEGIN_SRC js
 const Pet = new Model("Pet", [
   {name:"id", type:"INTEGER", pk:true},
   {name:"name", type:"TEXT"},
