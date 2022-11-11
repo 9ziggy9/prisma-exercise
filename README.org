@@ -470,3 +470,19 @@ $ node main.js
 #+END_SRC
 skips the initialization step. Let's read some data from our database!
 **** Reading In Data
+With out database initialized, suppose that we wish to pull in any Owners who currently have an appointment scheduled with Veterinarian "Alice". Such a SQL query would look something along the lines of:
+#+BEGIN_SRC sqlite
+ SELECT (Owner.name) FROM Owner
+    JOIN PET ON Pet.owner_id = Owner.id
+    JOIN Appointment ON Appointment.pet_id = Pet.id
+    JOIN Vertinarian ON Appointment.vet_id = Veterinarian.id
+    WHERE Veterinarian.name = "Alice";
+#+END_SRC
+It should be noted that while db.run() will certainly execute the above SQL, we infact need to use another method provided by our connection, namely db.all(). db.all() will pass the results of a selection in the form of an array of POJO represntations of the relevant rows. The second argument to callback contains this array.
+#+BEGIN_SRC js
+db.all(selectOwnerFromAppsSQL, (err, rows) => {
+  console.log(selectOwnerFromAppsSQL);
+  console.log(rows);
+  if (err) console.error(err.message);
+});
+#+END_SRC

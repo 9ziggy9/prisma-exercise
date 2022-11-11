@@ -41,8 +41,8 @@ const petSeedSQL = `INSERT INTO Pet (name, species, breed, owner_id) VALUES
   ("Puppers", "dog", "German Shepherd", 2),
   ("Bubbles", "fish", "Goldfish", 3)`;
 const appSeedSQL = `INSERT INTO Appointment (vet_id, pet_id, date) VALUES
-  (1, 2, strftime("%s", "now")),
-  (3, 1, strftime("%s", "now"))`;
+  (1, 3, strftime("%s", "now")),
+  (2, 1, strftime("%s", "now"))`;
 
 function init(db) {
   db.serialize(() => {
