@@ -574,6 +574,10 @@ CREATE TABLE IF NOT EXISTS Pet (  id INTEGER PRIMARY KEY , name TEXT , species T
 Success! At least, in principle we do indeed have an object-oriented JavaScript abstraction which can be "compiled" (I use this term loosely) to raw SQL. One glaring issue which remains is that we have not yet handled foreign keys--did you spot the "references" attribute of the Column model? This will come in due course, but for the time being, let's implement an interface which will allow our Model instances to interact with the database itself.
 
 *** The Database Interface
+A possible implementation of a class which interfaces with sqlite3 connection is given below. An instance of this client has three methods on it of primary concern.
+- registerModels(): This conveniently bundles all user defined models within an instance variable of client class.
+- init(): This takes our outputed SQL "translations" from Model and actually forwards them to the sqlite3 interpreter.
+- exit(): Deallocate resources and close.
 #+BEGIN_SRC js
 class MappingClient {
   constructor(db) {
@@ -591,5 +595,39 @@ class MappingClient {
 	if (err) console.error(err.message);
       }));
   }
+  exit = () => {
+    this.db.close(err => {
+      if (err) console.error(err.message);
+      console.log("Closed database connection.");
+    });
+  }
 }
 #+END_SRC
+Returning to our old main.js, let's refactor like so:
+#+BEGIN_SRC js
+const sqlite3 = require("sqlite3");
+const {MappingClient, Model} = require("./models");
+
+const orm = new MappingClient(new sqlite3.Database("./db/test.db", err => {
+  if (err) console.error(err.message);
+  console.log("Connected to database.");
+}));
+
+const Pet = new Model("Pet", [
+  {name:"id", type:"INTEGER", pk:true},
+  {name:"name", type:"TEXT", nullable:false},
+  {name:"species", type:"TEXT", unique:true},
+  {name:"breed", type:"TEXT"},
+  {name:"owner_id", type:"INTEGER"}
+]);
+
+orm.registerModels(Pet);
+orm.init();
+orm.exit();
+#+END_SRC
+Deleting the previous database and running reveals our interface does indeed function:
+#+BEGIN_SRC console
+$ rm db/test.db && node main.js
+$ sqlite3 db/test.db ".tables"
+>>> Pet
+#+END_SRc

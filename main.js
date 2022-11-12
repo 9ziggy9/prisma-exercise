@@ -6,24 +6,14 @@ const orm = new MappingClient(new sqlite3.Database("./db/test.db", err => {
   console.log("Connected to database.");
 }));
 
-if (process.argv[2] === "INIT") {
-  console.log("Initializing database...");
-  initDB(db);
-}
+const Pet = new Model("Pet", [
+  {name:"id", type:"INTEGER", pk:true},
+  {name:"name", type:"TEXT", nullable:false},
+  {name:"species", type:"TEXT", unique:true},
+  {name:"breed", type:"TEXT"},
+  {name:"owner_id", type:"INTEGER"}
+]);
 
-const selectOwnerFromAppsSQL = `SELECT (Owner.name) FROM OWNER
-  JOIN PET ON Pet.owner_id = Owner.id
-  JOIN Appointment ON Appointment.pet_id = Pet.id
-  JOIN Veterinarian ON Appointment.vet_id = Veterinarian.id
-  WHERE Veterinarian.name = "Alice"`;
-
-db.all(selectOwnerFromAppsSQL, (err, rows) => {
-  console.log(selectOwnerFromAppsSQL);
-  console.log(rows);
-  if (err) console.error(err.message);
-});
-
-db.close((err) => {
-  if (err) console.error(err.message);
-  console.log("Closed database connection.");
-});
+orm.registerModels(Pet);
+orm.init();
+orm.exit();

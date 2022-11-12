@@ -4,7 +4,7 @@ class MappingClient {
     this.models = [];
   }
   registerModels = (...models) =>
-    this.models = this.models = [...this.models, models];
+    this.models = this.models = [...this.models, ...models];
   init = () => {
     if (this.models.length === 0) console.error("NO MODELS DEFINED");
     else this.models
@@ -13,6 +13,12 @@ class MappingClient {
 	console.log(cmd);
 	if (err) console.error(err.message);
       }));
+  }
+  exit = () => {
+    this.db.close(err => {
+      if (err) console.error(err.message);
+      console.log("Closed database connection.");
+    });
   }
 }
 
@@ -47,12 +53,5 @@ class Model {
     }, `CREATE TABLE IF NOT EXISTS ${this.tableName} (`) + ")";
   };
 }
-// const Pet = new Model("Pet", [
-//   {name:"id", type:"INTEGER", pk:true},
-//   {name:"name", type:"TEXT", nullable:false},
-//   {name:"species", type:"TEXT", unique:true},
-//   {name:"breed", type:"TEXT"},
-//   {name:"owner_id", type:"INTEGER"}
-// ]);
 
-module.exports = {Column, Model};
+module.exports = {MappingClient, Model};
