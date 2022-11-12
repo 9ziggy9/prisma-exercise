@@ -1,4 +1,5 @@
 * Object-relational Mapping (ORM)
+#+OPTIONS: toc:2
 To better interact with persistant data it is often useful to apply a layer of abstraction which allows us interface in the native language of our backend application as opposed to simply forwarding raw queries to our database.\\
 One such abstraction is a technique known as "object-relational mapping" (ORM). ORMs seek to represent the structure of relational databases in the form of object-oriented design. Once this abstraction is applied, one may easily perform database operations in the context of our chosen application language.
 ** Motivation
