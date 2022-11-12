@@ -1,3 +1,21 @@
+class MappingClient {
+  constructor(db) {
+    this.db = db;
+    this.models = [];
+  }
+  registerModels = (...models) =>
+    this.models = this.models = [...this.models, models];
+  init = () => {
+    if (this.models.length === 0) console.error("NO MODELS DEFINED");
+    else this.models
+      .map(model => model.sqlCreate())
+      .forEach(cmd => this.db.run(cmd, err => {
+	console.log(cmd);
+	if (err) console.error(err.message);
+      }));
+  }
+}
+
 class Column {
   constructor(name, type,
 	      pk=false, nullable=true,
@@ -23,19 +41,18 @@ class Model {
     return this.columns.reduce((cmd, col, i) => {
       const nameType = ` ${this._handleComma(i)} ${col.name} ${col.type}`;
       const pk = col.pk ? " PRIMARY KEY" : "";
-      const nullable = col.nullable ? "" : "NOT NULL";
-      const unique = col.unique ? "UNIQUE" : "";
+      const nullable = col.nullable ? "" : " NOT NULL";
+      const unique = col.unique ? " UNIQUE" : "";
       return cmd += nameType + pk + nullable + unique;
     }, `CREATE TABLE IF NOT EXISTS ${this.tableName} (`) + ")";
-  }
+  };
 }
+// const Pet = new Model("Pet", [
+//   {name:"id", type:"INTEGER", pk:true},
+//   {name:"name", type:"TEXT", nullable:false},
+//   {name:"species", type:"TEXT", unique:true},
+//   {name:"breed", type:"TEXT"},
+//   {name:"owner_id", type:"INTEGER"}
+// ]);
 
-const Pet = new Model("Pet", [
-  {name:"id", type:"INTEGER", pk:true},
-  {name:"name", type:"TEXT"},
-  {name:"species", type:"TEXT"},
-  {name:"breed", type:"TEXT"},
-  {name:"owner_id", type:"INTEGER"}
-]);
-
-console.log(Pet.sqlCreate());
+module.exports = {Column, Model};

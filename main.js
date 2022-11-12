@@ -1,10 +1,10 @@
 const sqlite3 = require("sqlite3");
-const initDB = require("./initDB");
+const {MappingClient, Model} = require("./models");
 
-const db = new sqlite3.Database("./db/test.db", err => {
+const orm = new MappingClient(new sqlite3.Database("./db/test.db", err => {
   if (err) console.error(err.message);
   console.log("Connected to database.");
-});
+}));
 
 if (process.argv[2] === "INIT") {
   console.log("Initializing database...");

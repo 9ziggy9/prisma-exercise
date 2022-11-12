@@ -499,6 +499,7 @@ $ node main.js
 There has to be a better way. The first (possibly naive) idea that comes to mind is implementing functions which take arguments and pass them to interpolated strings expressing our SQL statements. The second, and more powerful idea, is making the observation that to each table we have explicly defined a set of operations for manipulation of SOLELY that data, i.e. creation of tables, addition of data, reading of data, etc... In principle, if we could encapsulate the notion of a given table as a so-called "model" then perhaps all CRUD operations and table properties could be managed in a more convenient way. With this in mind, let's attempt such an abstraction.
 
 ** A Naive ORM Implementation
+*** Columns and Models
 We now seek to encapsulate our rather verbose and cumbersome SQL code into an object-oriented design pattern. As mentioned in our conclusion to part 1, we can first make the observation that to each table in our db is a rather natural notion of "model". By model, we mean a JavaScript representation of the table and its properties. To make such a notion more concrete, let's begin by creating a models.js file and define a class representation of a table's columns.
 #+BEGIN_SRC js
 class Column {
@@ -570,4 +571,25 @@ We would receive the following output.
 #+BEGIN_SRC sqlite
 CREATE TABLE IF NOT EXISTS Pet (  id INTEGER PRIMARY KEY , name TEXT , species TEXT , breed TEXT , owner_id INTEGER)
 #+END_SRC
-Success! At least, in principle we do indeed have an object-oriented JavaScript abstraction which can be "compiled" (I use this term loosely) to raw SQL.
+Success! At least, in principle we do indeed have an object-oriented JavaScript abstraction which can be "compiled" (I use this term loosely) to raw SQL. One glaring issue which remains is that we have not yet handled foreign keys--did you spot the "references" attribute of the Column model? This will come in due course, but for the time being, let's implement an interface which will allow our Model instances to interact with the database itself.
+
+*** The Database Interface
+#+BEGIN_SRC js
+class MappingClient {
+  constructor(db) {
+    this.db = db;
+    this.models = [];
+  }
+  registerModels = (...models) =>
+    this.models = this.models = [...this.models, models];
+  init = () => {
+    if (this.models.length === 0) console.error("NO MODELS DEFINED");
+    else this.models
+      .map(model => model.sqlCreate())
+      .forEach(cmd => this.db.run(cmd, err => {
+	console.log(cmd);
+	if (err) console.error(err.message);
+      }));
+  }
+}
+#+END_SRC
