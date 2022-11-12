@@ -21,6 +21,17 @@ const Owner = new Model("Owner", [
   {name: "address", type:"TEXT"}
 ]);
 
-orm.registerModels(Pet, Owner);
+const Veterinarian = new Model("Veterinarian", [
+  {name: "id", type:"INTEGER", pk:true},
+  {name: "name", type:"TEXT", nullable:false},
+]);
+
+const Appointment = new Model("Appointment", [
+  {name: "id", type:"INTEGER", pk:true},
+  {name: "vet_id", type:"INTEGER", nullable:false},
+  {name: "pet_id", type:"INTEGER", nullable:false},
+]);
+
+orm.registerModels(Pet, Owner, Appointment, Veterinarian);
 orm.init();
 orm.exit();
